@@ -4,7 +4,6 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { UpskillInputs, UpskillPlan, ApiError } from '@/lib/types';
 import { saveInputs, savePlan } from '@/lib/storage';
-import QuizFlow from '@/app/components/QuizFlow';
 
 const SKILL_OPTIONS = [
   'Java',
@@ -21,7 +20,12 @@ const SKILL_OPTIONS = [
   'GenAI Basics',
 ];
 
-// Target role is now free-text with suggestions; remove fixed list
+const TARGET_GOALS = [
+  'AI/ML Engineer',
+  'Applied ML Engineer',
+  'GenAI Engineer',
+  'AI Tech Lead',
+];
 
 const STUDY_TIMES = ['Morning', 'Evening', 'Flexible'];
 const LOW_ENERGY_TIMES = ['6 PM', '7 PM', '8 PM', '9 PM', 'No constraint'];
@@ -33,8 +37,6 @@ export default function LandingPage() {
   // Form state
   const [fullName, setFullName] = useState('');
   const [currentRole, setCurrentRole] = useState('');
-  const [roleSuggestions, setRoleSuggestions] = useState<string[]>([]);
-  const [targetRoleSuggestions, setTargetRoleSuggestions] = useState<string[]>([]);
   const [yearsExperience, setYearsExperience] = useState<number>(3);
   const [currentSkills, setCurrentSkills] = useState<string[]>([]);
   const [customSkill, setCustomSkill] = useState('');
@@ -47,12 +49,9 @@ export default function LandingPage() {
   const [notes, setNotes] = useState('');
 
   // UI state
-  const [showQuiz, setShowQuiz] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-  const [loadingTargetSuggestions, setLoadingTargetSuggestions] = useState(false);
 
   const toggleSkill = (skill: string) => {
     setCurrentSkills((prev) =>
@@ -72,75 +71,12 @@ export default function LandingPage() {
     setCurrentSkills((prev) => prev.filter((s) => s !== skill));
   };
 
-  const getRoleSuggestions = async (partialRole: string) => {
-    if (!partialRole.trim() || partialRole.length < 2) {
-      setRoleSuggestions([]);
-      return;
-    }
-
-    setLoadingSuggestions(true);
-    try {
-      const response = await fetch('/api/suggest-roles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roleInput: partialRole.trim() }),
-      });
-
-      const data = await response.json();
-      if (response.ok && Array.isArray(data.suggestions)) {
-        setRoleSuggestions(data.suggestions);
-      }
-    } catch (error) {
-      console.error('Error getting role suggestions:', error);
-    } finally {
-      setLoadingSuggestions(false);
-    }
-  };
-
-  const handleRoleChange = (value: string) => {
-    setCurrentRole(value);
-    getRoleSuggestions(value);
-  };
-
-  const handleQuizComplete = (quizAnswers: Record<string, string | string[]>) => {
-    setCurrentRole(quizAnswers.current_role as string);
-    setTargetGoal(quizAnswers.career_goal as string);
-    const availabilityMap: Record<string, number> = { '0_3': 2, '3_5': 4, '5_10': 7, '10_plus': 15 };
-    setWeeklyHours(availabilityMap[quizAnswers.availability as string] || 5);
-    setShowQuiz(false);
-  };
-
-  const getTargetRoleSuggestions = async (partialRole: string) => {
-    if (!partialRole.trim() || partialRole.length < 2) {
-      setTargetRoleSuggestions([]);
-      return;
-    }
-
-    setLoadingTargetSuggestions(true);
-    try {
-      const response = await fetch('/api/suggest-roles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roleInput: partialRole.trim() }),
-      });
-
-      const data = await response.json();
-      if (response.ok && Array.isArray(data.suggestions)) {
-        setTargetRoleSuggestions(data.suggestions);
-      }
-    } catch (error) {
-      console.error('Error getting target role suggestions:', error);
-    } finally {
-      setLoadingTargetSuggestions(false);
-    }
-  };
-
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
     if (!fullName.trim()) errors.fullName = 'Full name is required';
     if (!currentRole.trim()) errors.currentRole = 'Current role is required';
-    if (!targetGoal.trim()) errors.targetGoal = 'Please enter a target role';
+    if (!targetGoal) errors.targetGoal = 'Please select a target goal';
     if (!preferredStudyTime) errors.preferredStudyTime = 'Please select study time';
     if (!lowEnergyAfter) errors.lowEnergyAfter = 'Please select low energy time';
     if (!weekendAvailability) errors.weekendAvailability = 'Please select weekend availability';
@@ -172,7 +108,7 @@ export default function LandingPage() {
       currentRole: currentRole.trim(),
       yearsExperience,
       currentSkills,
-      targetGoal: targetGoal.trim(),
+      targetGoal,
       weeklyHours,
       commuteMinutesPerDay,
       preferredStudyTime,
@@ -214,42 +150,34 @@ export default function LandingPage() {
     }
   };
 
-  if (showQuiz) {
-    return <QuizFlow onComplete={handleQuizComplete} />;
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-4 animate-pulse">
-            Refine Your Roadmap
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white rounded-lg shadow-xl p-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            AI Upskill Planner
           </h1>
-          <p className="text-xl text-gray-300 mb-2">
-            ✨ You completed the quiz! Let's fine-tune your personalized plan.
+          <p className="text-gray-600 mb-8">
+            Get your personalized 12-week roadmap to transition from backend engineering to AI/ML roles
           </p>
-          <div className="h-1 w-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
-        </div>
 
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl p-8 border border-purple-500/10 hover:border-purple-500/30 transition-all">
           {errorMessage && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-6 py-4 rounded-lg mb-6 backdrop-blur-sm">
-              ⚠️ {errorMessage}
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
+              {errorMessage}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Full Name */}
             <div>
-              <label className="block text-sm font-bold text-purple-300 mb-2 uppercase tracking-wider">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Full Name *
               </label>
               <input
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-700 border border-purple-500/30 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder-gray-400"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="John Doe"
               />
               {validationErrors.fullName && (
@@ -259,65 +187,42 @@ export default function LandingPage() {
 
             {/* Current Role */}
             <div>
-              <label className="block text-sm font-bold text-purple-300 mb-2 uppercase tracking-wider">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Current Role *
               </label>
               <input
                 type="text"
                 value={currentRole}
-                onChange={(e) => handleRoleChange(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-700 border border-purple-500/30 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder-gray-400"
+                onChange={(e) => setCurrentRole(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Backend Engineer"
               />
-              {loadingSuggestions && (
-                <p className="text-purple-300 text-sm mt-2">Getting suggestions...</p>
-              )}
-              {roleSuggestions.length > 0 && (
-                <div className="mt-3 p-3 bg-slate-700 border border-purple-500/30 rounded-lg">
-                  <p className="text-sm font-medium text-purple-300 mb-2">Similar Roles:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {roleSuggestions.map((suggestion, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          setCurrentRole(suggestion);
-                          setRoleSuggestions([]);
-                        }}
-                        className="text-sm px-3 py-1 bg-purple-600 border border-purple-400 text-white rounded hover:bg-purple-500 transition"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
               {validationErrors.currentRole && (
-                <p className="text-red-400 text-sm mt-1">{validationErrors.currentRole}</p>
+                <p className="text-red-600 text-sm mt-1">{validationErrors.currentRole}</p>
               )}
             </div>
 
             {/* Years Experience */}
             <div>
-              <label className="block text-sm font-bold text-purple-300 mb-2 uppercase tracking-wider">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Years of Experience *
               </label>
               <input
                 type="number"
                 value={yearsExperience}
                 onChange={(e) => setYearsExperience(Number(e.target.value))}
-                className="w-full px-4 py-3 bg-slate-700 border border-purple-500/30 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder-gray-400"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 min="0"
                 max="30"
               />
               {validationErrors.yearsExperience && (
-                <p className="text-red-400 text-sm mt-1">{validationErrors.yearsExperience}</p>
+                <p className="text-red-600 text-sm mt-1">{validationErrors.yearsExperience}</p>
               )}
             </div>
 
             {/* Current Skills */}
             <div>
-              <label className="block text-sm font-bold text-purple-300 mb-2 uppercase tracking-wider">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Current Skills
               </label>
               <div className="flex flex-wrap gap-2 mb-3">
@@ -328,8 +233,8 @@ export default function LandingPage() {
                     onClick={() => toggleSkill(skill)}
                     className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
                       currentSkills.includes(skill)
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-slate-600 text-gray-200 hover:bg-slate-500'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
                     {skill}
@@ -344,7 +249,7 @@ export default function LandingPage() {
                   value={customSkill}
                   onChange={(e) => setCustomSkill(e.target.value)}
                   placeholder="Add custom skill"
-                  className="flex-1 px-4 py-3 bg-slate-700 border border-purple-500/30 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder-gray-400"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -355,7 +260,7 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={addCustomSkill}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                 >
                   Add
                 </button>
@@ -383,44 +288,23 @@ export default function LandingPage() {
               )}
             </div>
 
-            {/* Target Goal (free text with suggestions) */}
+            {/* Target Goal */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Target Role *
+                Target Goal *
               </label>
-              <input
-                type="text"
+              <select
                 value={targetGoal}
-                onChange={(e) => {
-                  setTargetGoal(e.target.value);
-                  getTargetRoleSuggestions(e.target.value);
-                }}
+                onChange={(e) => setTargetGoal(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="e.g., Associate Product Manager"
-              />
-              {loadingTargetSuggestions && (
-                <p className="text-blue-600 text-sm mt-2">Getting role suggestions...</p>
-              )}
-              {targetRoleSuggestions.length > 0 && (
-                <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Suggested Target Roles:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {targetRoleSuggestions.map((suggestion, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          setTargetGoal(suggestion);
-                          setTargetRoleSuggestions([]);
-                        }}
-                        className="text-sm px-3 py-1 bg-white border border-blue-300 rounded hover:bg-blue-100 transition"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              >
+                <option value="">Select target role</option>
+                {TARGET_GOALS.map((goal) => (
+                  <option key={goal} value={goal}>
+                    {goal}
+                  </option>
+                ))}
+              </select>
               {validationErrors.targetGoal && (
                 <p className="text-red-600 text-sm mt-1">{validationErrors.targetGoal}</p>
               )}
@@ -530,14 +414,14 @@ export default function LandingPage() {
 
             {/* Notes */}
             <div>
-              <label className="block text-sm font-bold text-purple-300 mb-2 uppercase tracking-wider">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Additional Notes
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={4}
-                className="w-full px-4 py-3 bg-slate-700 border border-purple-500/30 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder-gray-400"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Any specific goals, constraints, or preferences..."
               />
             </div>
@@ -546,16 +430,9 @@ export default function LandingPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-2xl"
+              className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin">⚡</span>
-                  Generating Your AI Plan...
-                </span>
-              ) : (
-                '🚀 Generate My Personalized Plan'
-              )}
+              {loading ? 'Generating Your Plan...' : 'Generate My Personalized Plan'}
             </button>
           </form>
         </div>
