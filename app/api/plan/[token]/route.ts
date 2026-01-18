@@ -3,10 +3,10 @@ import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const token = params.token;
+    const { token } = await params;
 
     if (!token || typeof token !== 'string') {
       return NextResponse.json(
@@ -35,8 +35,8 @@ export async function GET(
 
     return NextResponse.json({
       ok: true,
-      plan: data.plan,
-      inputs: data.inputs,
+      plan: (data as any).plan,
+      inputs: (data as any).inputs,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

@@ -5,16 +5,22 @@ import { X, Check, Zap, ArrowRight, Users, Award } from 'lucide-react';
 
 interface ConvertModalProps {
   onClose: () => void;
-  userName: string;
-  targetRole: string;
-  completionRate: number;
+  userName?: string;
+  targetRole?: string;
+  tier?: string;
+  completionRate?: number;
+  completionPercentage?: number;
+  onUpgrade?: () => void;
 }
 
 export default function ConvertModal({
   onClose,
-  userName,
-  targetRole,
-  completionRate,
+  userName = 'User',
+  targetRole = 'Professional',
+  tier,
+  completionRate = 0,
+  completionPercentage = 0,
+  onUpgrade,
 }: ConvertModalProps) {
   const [selectedPlan, setSelectedPlan] = useState<'pro' | 'premium' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);

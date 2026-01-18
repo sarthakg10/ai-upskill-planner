@@ -57,7 +57,7 @@ export function validateInputs(obj: any): ValidationResult {
   let currentSkills: string[] = [];
   if (Array.isArray(obj.currentSkills)) {
     currentSkills = obj.currentSkills.filter(
-      (skill) => typeof skill === 'string' && skill.trim() !== ''
+      (skill: any) => typeof skill === 'string' && skill.trim() !== ''
     );
   }
 

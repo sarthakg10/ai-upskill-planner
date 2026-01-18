@@ -68,11 +68,11 @@ export async function POST(request: NextRequest) {
       full_name: inputs.fullName,
       target_goal: inputs.targetGoal,
       lead_score: leadScore,
-      inputs: inputs,
-      plan: plan,
+      inputs: inputs as any,
+      plan: plan as any,
       plan_token: planToken,
       source: 'web',
-    });
+    } as any);
 
     if (leadError) {
       console.error('Failed to insert lead:', leadError);
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         lead_score: leadScore,
         target_goal: inputs.targetGoal,
       },
-    });
+    } as any);
 
     if (eventError) {
       console.error('Failed to insert event:', eventError);

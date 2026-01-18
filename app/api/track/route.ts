@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       event_type,
       email: email || null,
       meta: meta || {},
-    });
+    } as any);
 
     if (error) {
       console.error('Failed to insert event:', error);

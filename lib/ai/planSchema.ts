@@ -72,6 +72,10 @@ export const UpskillPlanSchema = z.object({
       })
     )
     .length(3, 'Must have exactly 3 next actions'),
+
+  target_role: z.optional(z.string()),
+  current_role: z.optional(z.string()),
+  weekly_hours: z.optional(z.number()),
 });
 
 export type UpskillPlan = z.infer<typeof UpskillPlanSchema>;

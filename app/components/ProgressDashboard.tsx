@@ -14,22 +14,28 @@ import {
 } from 'lucide-react';
 
 interface DashboardProps {
-  userName: string;
-  targetRole: string;
+  userName?: string;
+  targetRole?: string;
+  weekNumber: number;
   currentStreak: number;
   tasksCompleted: number;
   totalTasks: number;
+  completionPercentage?: number;
+  onTaskComplete?: () => void;
 }
 
 export default function ProgressDashboard({
-  userName,
-  targetRole,
+  userName = 'User',
+  targetRole = 'Developer',
+  weekNumber = 1,
   currentStreak = 5,
   tasksCompleted = 12,
   totalTasks = 60,
+  completionPercentage,
+  onTaskComplete,
 }: DashboardProps) {
   const [showMilestoneUnlock, setShowMilestoneUnlock] = useState(false);
-  const completionRate = Math.round((tasksCompleted / totalTasks) * 100);
+  const completionRate = completionPercentage ?? Math.round((tasksCompleted / totalTasks) * 100);
 
   useEffect(() => {
     if (tasksCompleted % 5 === 0 && tasksCompleted > 0) {
